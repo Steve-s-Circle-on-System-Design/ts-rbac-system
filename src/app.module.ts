@@ -1,22 +1,21 @@
-
-import { Module } from '@nestjs/common';
-import { ThrottlerModule } from '@nestjs/throttler';
-import { CacheModule } from '@nestjs/cache-manager';
-import { ScheduleModule } from '@nestjs/schedule';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { databaseConfig } from './shared/config/database.config';
-import appConfig from './shared/config/app.config';
-
 // Import all the system modules here
-
 // Import Controller and Service
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
+import { CacheModule } from '@nestjs/cache-manager';
+import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { TypeOrmModule } from '@nestjs/typeorm';
 
+import { AuthModule } from './chore/auth/auth.module';
+import { UsersModule } from './chore/users/users.module';
+import appConfig from './shared/config/app.config';
+import { databaseConfig } from './shared/config/database.config';
 
 @Module({
   imports: [
+    AuthModule,
+    UsersModule,
     // 1. Core system configuration
     ConfigModule.forRoot({
       load: [databaseConfig, appConfig],
@@ -45,19 +44,17 @@ import { AppService } from './app.service';
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        ...configService.get('database'),
-      }),
+      useFactory: (configService: ConfigService) =>
+        configService.getOrThrow('database'),
     }),
 
     // 5. Scheduled tasks
     ScheduleModule.forRoot(),
 
     // 6. Feature and utility modules (call them here), (Utility - EventsModule and EmailModule)
-    
   ],
 
-  controllers: [AppController],
-  providers: [AppService],
+  controllers: [],
+  providers: [],
 })
-export class AppModule { }
+export class AppModule {}
