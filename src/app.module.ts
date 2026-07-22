@@ -7,8 +7,8 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
-import { AuthModule } from './chore/auth/auth.module';
-import { UsersModule } from './chore/users/users.module';
+import { AuthModule } from './core/auth/auth.module';
+import { UsersModule } from './core/users/users.module';
 import appConfig from './shared/config/app.config';
 import { databaseConfig } from './shared/config/database.config';
 

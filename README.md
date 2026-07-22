@@ -1,11 +1,8 @@
-# `Markdown` 
+# `Enterprise Role-Based Access Control (RBAC) & Event-Driven Engine` 
+
 
 ```
-# Enterprise Role-Based Access Control (RBAC) & Event-Driven Engine
-```
-
-```
-An enterprise-grade, open-source backend engine built with **NestJS**,
+# An enterprise-grade, open-source backend engine built with **NestJS**,
 ```
 
 ```
