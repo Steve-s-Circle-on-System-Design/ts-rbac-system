@@ -23,7 +23,7 @@ export class RefreshToken {
   tokenFamily!: string; // Same family for rotated tokens
 
   @Column({ nullable: true })
-  rotatedFrom?: string; // Previous token ID
+  rotatedFrom?: string; // Previous token ID, can also be named parentTokenId
 
   @ManyToOne(() => User, (user) => user.refreshTokens, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })

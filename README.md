@@ -1,98 +1,256 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# `Markdown` 
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
-
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
-
-## Description
-
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
-
-## Project setup
-
-```bash
-$ npm install
+```
+# Enterprise Role-Based Access Control (RBAC) & Event-Driven Engine
 ```
 
-## Compile and run the project
-
-```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+```
+An enterprise-grade, open-source backend engine built with **NestJS**,
 ```
 
-## Run tests
-
-```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+```
+**TypeScript**, and **PostgreSQL**. This system provides a secure authentication
+& authorization foundation featuring multi-channel auth, token lifecycle
+management, defensive account lockout mechanisms, an event-driven email delivery
+pipeline, and a vendor-agnostic file upload engine.
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+```
+---
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+```
+## 📸 Key Features & Architecture
+```
 
-## Resources
+```
+### 1. Multi-Channel Authentication & Security
+```
 
-Check out a few resources that may come in handy when working with NestJS:
+- `**Hybrid Authentication Mechanics:**` 
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+- `**Traditional Credentials:** Email + Password authentication secured with` 
 
-## Support
+```
+`bcrypt` password hashing.
+```
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+- `**Social Identity Federation:** Google OAuth 2.0 with automatic account linking. - **Passwordless Magic OTP:** 6-digit email-delivered passcodes for frictionfree authentication.` 
 
-## Stay in touch
+```
+- **Token Lifecycle Management:**
+```
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+- `Short-lived **Access Tokens** (15-minute expiration).` 
 
-## License
+- `Single-use **Refresh Tokens** (7-day longevity) utilizing strict slidingwindow token rotation.` 
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+- `Automated session revocation on password modifications or explicit logouts.` 
+
+- `**Account Lockout Defense:**` 
+
+- `Real-time failed login attempt tracking.` 
+
+- `Automatic 15-minute account lockout after 5 consecutive failed login attempts.` 
+
+- `Instant security alert emails dispatched upon trigger.` 
+
+- `**Role-Based Access Control (RBAC):**` 
+
+- `Granular multi-tier authorization (`USER`, `ADMIN`).` 
+
+- `Custom `@Roles()` decorator paired with `RolesGuard` metadata extraction. - **Endpoint Protection:**` 
+
+- `Security header masking via `Helmet` (XSS, clickjacking prevention).` 
+
+- `Dynamic CORS origin validation.` 
+
+- `Global `ValidationPipe` for strict payload sanitization.` 
+
+```
+### 2. Asynchronous Event-Driven Engine
+- **Decoupled Architecture:** Utilizes `@nestjs/event-emitter` to offload heavy
+background tasks (emails, analytics) from the main HTTP request-response thread.
+- **Transactional Audit Ledger:** Dedicated `email_logs` relational table
+tracking every outbound email dispatch.
+```
+
+`- **State Machine Pipeline:** Full delivery lifecycle tracking: `Pending`` ➡️� ``Sent`` ➡️� ``Delivered`` ➡️� ``Opened`` ➡️� ``Clicked` - **Resilience Engineering:** Automated exponential backoff and retry mechanisms wrapping outbound third-party API calls. - **Telemetry Engine:** Real-time data parser aggregating open, bounce, and click rates.` 
+
+```
+### 3. Modular File Upload Subsystem
+```
+
+```
+- **Standalone Architecture:** Vendor-agnostic file module allowing seamless
+provider swaps without breaking core domain logic.
+- **Memory Streaming:** Direct streaming from disk-less `Multer` buffers to
+Cloudinary, ensuring zero temporary files land on the server filesystem.
+```
+
+```
+---
+```
+
+`##` 🛠 `Tech Stack` 
+
+- `**Framework:** NestJS (TypeScript)` 
+
+- `**Database:** PostgreSQL` 
+
+```
+- **ORM:** TypeORM / Prisma
+- **Security:** Passport.js, JWT, Bcrypt, Helmet
+- **Event Bus:** NestJS EventEmitter2
+- **File Storage:** Multer, Cloudinary
+- **Containerization:** Docker & Docker Compose
+```
+
+```
+---
+```
+
+```
+## 📸 Getting Started
+```
+
+```
+### Prerequisites
+Make sure you have the following installed locally:
+- [Node.js](https://nodejs.org/) (v18+ or v20+)
+- [npm](https://www.npmjs.com/) or [pnpm](https://pnpm.io/)
+- [Docker](https://www.docker.com/) & [Docker
+Compose](https://docs.docker.com/compose/)
+```
+
+```
+---
+```
+
+```
+### Installation & Environment Setup
+```
+
+```
+1. **Clone the Repository:**
+   ```bash
+   git clone
+[https://github.com/your-username/rbac-event-engine.git](https://github.com/
+your-username/rbac-event-engine.git)
+   cd rbac-event-engine
+```
+
+```
+    Install Dependencies:
+    Bash
+    npm install
+    Configure Environment Variables:
+    Copy the example environment configuration:
+    Bash
+    cp .env.example .env
+    Fill in your local setup details inside .env:
+    Code snippet
+    # Application
+    PORT=3000
+    NODE_ENV=development
+    # Database Configuration
+    DB_HOST=localhost
+    DB_PORT=5432
+    DB_USERNAME=postgres
+    DB_PASSWORD=postgres
+    DB_NAME=rbac_db
+    # JWT Tokens
+    JWT_ACCESS_SECRET=your_super_secret_access_key
+    JWT_ACCESS_EXPIRATION=15m
+    JWT_REFRESH_SECRET=your_super_secret_refresh_key
+    JWT_REFRESH_EXPIRATION=7d
+    # OAuth
+    GOOGLE_CLIENT_ID=your_google_client_id
+    GOOGLE_CLIENT_SECRET=your_google_client_secret
+    GOOGLE_CALLBACK_URL=http://localhost:3000/auth/google/callback
+```
+
+```
+    # Cloudinary
+    CLOUDINARY_CLOUD_NAME=your_cloud_name
+    CLOUDINARY_API_KEY=your_api_key
+    CLOUDINARY_API_SECRET=your_api_secret
+    Spin up Infrastructure (PostgreSQL):
+    Bash
+    docker compose up -d
+    Run Database Migrations:
+    Bash
+    npm run migration:run
+    Start Development Server:
+    Bash
+    npm run start:dev
+```
+
+```
+    The API server will run at http://localhost:3000/api.
+```
+
+🛡 `Security Workflows Role-Based Authorization Usage` 
+
+```
+Protect routes using the @Roles() decorator and RolesGuard:
+TypeScript
+```
+
+```
+import { Controller, Get, UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { Role } from '../users/enums/role.enum';
+@Controller('admin')
+@UseGuards(JwtAuthGuard, RolesGuard)
+export class AdminController {
+  @Get('dashboard')
+  @Roles(Role.ADMIN)
+  getAdminDashboard() {
+    return { message: 'Welcome to the privileged admin panel.' };
+  }
+}
+📸 Testing & Quality Assurance
+Bash
+# Unit tests
+npm run test
+# End-to-end (E2E) integration tests
+npm run test:e2e
+# Code formatting & linting checks
+npm run lint
+npm run format
+📸 Contributing Guidelines
+```
+
+```
+We welcome open-source contributions! To keep our codebase clean and
+maintainable:
+```
+
+```
+    Pick an Issue: Check open issues or pick a milestone task.
+```
+
+```
+    Branching Strategy: Name your feature branches cleanly: feat/feature-name,
+fix/bug-fix, or chore/task-name.
+```
+
+```
+    Commit Conventions: Follow Conventional Commits format (e.g., feat(auth):
+implement refresh token rotation).
+```
+
+```
+    Pull Requests: Ensure all unit/E2E tests pass and linting checks run cleanly
+before requesting code review.
+```
+
+- `📸 License` 
+
+```
+This project is open-source and licensed under the MIT License.
+```
+

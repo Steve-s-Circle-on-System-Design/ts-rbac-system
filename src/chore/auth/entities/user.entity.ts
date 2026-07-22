@@ -27,6 +27,7 @@ export enum AccountStatus {
 }
 
 @Entity('users')
+@Index(['email']) // Indexed email
 export class User {
   @PrimaryGeneratedColumn('uuid') // UUID for better security
   id!: string;
