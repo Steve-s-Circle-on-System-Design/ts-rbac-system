@@ -7,5 +7,4 @@ export class jwtGuard extends AuthGuard('jwt') {
   constructor(private reflector: Reflector) {
     super();
   }
-
 }
