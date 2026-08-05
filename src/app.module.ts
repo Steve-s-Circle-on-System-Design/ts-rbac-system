@@ -3,18 +3,18 @@
 import { CacheModule } from '@nestjs/cache-manager';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { AuthModule } from './core/auth/auth.module';
-import { UsersModule } from './core/users/users.module';
-import appConfig from './shared/config/app.config';
-import redisConfig from './shared/config/redis.config';
-import { databaseConfig } from './shared/config/database.config';
-import { EventEmitterModule } from '@nestjs/event-emitter';
 import { QueueModule } from './core/queue/queue.module';
 import { RedisModule } from './core/redis/redis.module';
+import { UsersModule } from './core/users/users.module';
+import appConfig from './shared/config/app.config';
+import { databaseConfig } from './shared/config/database.config';
+import redisConfig from './shared/config/redis.config';
 
 @Module({
   imports: [
@@ -65,4 +65,4 @@ import { RedisModule } from './core/redis/redis.module';
   controllers: [],
   providers: [],
 })
-export class AppModule { }
+export class AppModule {}

@@ -1,19 +1,26 @@
-import { Injectable, Inject, OnApplicationBootstrap, Logger } from '@nestjs/common';
-import { Redis } from 'ioredis';
 import { REDIS_CLIENT } from './redis.provider';
+
+import {
+  Inject,
+  Injectable,
+  Logger,
+  OnApplicationBootstrap,
+} from '@nestjs/common';
+
+import { Redis } from 'ioredis';
 
 @Injectable()
 export class RedisHealthService implements OnApplicationBootstrap {
-    private readonly logger = new Logger(RedisHealthService.name);
+  private readonly logger = new Logger(RedisHealthService.name);
 
-    constructor(@Inject(REDIS_CLIENT) private readonly redis: Redis) { }
+  constructor(@Inject(REDIS_CLIENT) private readonly redis: Redis) {}
 
-    async onApplicationBootstrap() {
-        try {
-            const result = await this.redis.ping();
-            this.logger.log(`Redis connected: ${result}`);
-        } catch (err) {
-            this.logger.error('Redis connection failed', err);
-        }
+  async onApplicationBootstrap(): Promise<void> {
+    try {
+      const result = await this.redis.ping();
+      this.logger.log(`Redis connected: ${result}`);
+    } catch (err) {
+      this.logger.error('Redis connection failed', err);
     }
+  }
 }
