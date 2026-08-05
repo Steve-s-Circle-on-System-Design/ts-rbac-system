@@ -1,15 +1,15 @@
 import { AuthController } from './auth.controller';
+import { AuthListener } from './auth.listener';
 import { AuthService } from './auth.service';
 
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { QueueModule } from '../queue/queue.module';
-import { AuthListener } from './auth.listener';
 
 import type { SignOptions } from 'jsonwebtoken';
 
+import { QueueModule } from '../queue/queue.module';
 import { UsersModule } from '../users/users.module';
 
 import { RefreshToken } from './entities/refresh-token.entity';
@@ -43,4 +43,4 @@ import { LocalStrategy } from './strategy/local.strategy';
   providers: [AuthService, LocalStrategy, JwtStrategy, AuthListener],
   exports: [AuthService, JwtModule],
 })
-export class AuthModule { }
+export class AuthModule {}

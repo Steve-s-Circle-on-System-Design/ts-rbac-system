@@ -12,9 +12,7 @@ import { LoginResponse } from './interfaces/auth-response.interface';
 
 @Controller('auth')
 export class AuthController {
-  constructor(
-    private readonly authService: AuthService,
-  ) { }
+  constructor(private readonly authService: AuthService) {}
 
   @Post('login')
   login(
@@ -24,31 +22,25 @@ export class AuthController {
   }
 
   @Post('register')
-  async register(
-    @Body() dto: CreateAuthDto,
-  ): Promise<{ message: string }> {
+  async register(@Body() dto: CreateAuthDto): Promise<{ message: string }> {
     await this.authService.register(dto);
     return { message: 'Sign Up successful, verify Email.' };
   }
 
   @Get('verify-email')
-  verifyEmail(
-    @Query('token') token: string,
-  ): Promise<{ verified: boolean }> {
+  verifyEmail(@Query('token') token: string): Promise<{ verified: boolean }> {
     return this.authService.verifyEmail(token);
   }
 
-// TODO: add refresh and logout methods before uncommenting
+  @Post('refresh')
+  refresh(@Body() dto: RefreshTokenDto): Promise<LoginResponse> {
+    return this.authService.refreshTokens(dto.refreshToken);
+  }
 
-// @Post('refresh')
-// refresh(@Body() dto: RefreshTokenDto): Promise<LoginResponse> {
-//   return this.authService.refreshTokens(dto.refreshToken);
-// }
-
-// @Post('logout')
-// logout(@Body() dto: RefreshTokenDto): Promise<{ message: string }> {
-//   return this.authService.logout(dto.refreshToken);
-// }
+  @Post('logout')
+  logout(@Body() dto: RefreshTokenDto): Promise<{ message: string }> {
+    return this.authService.logout(dto.refreshToken);
+  }
 
   @Get('admin-test')
   @UseGuards(jwtGuard, RolesGuard)

@@ -13,7 +13,7 @@ export class UsersService {
     @InjectRepository(User)
     private usersRepository: Repository<User>,
     private readonly configService: ConfigService,
-  ) { }
+  ) {}
 
   async incrementFailedAttempts(userId: string): Promise<void> {
     const maxAttempts = this.getPositiveIntegerConfig(

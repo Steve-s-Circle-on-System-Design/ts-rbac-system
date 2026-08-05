@@ -37,37 +37,35 @@ describe('AuthController', () => {
     expect(controller).toBeDefined();
   });
 
-  // TODO: Add tests for refresh and logout before uncommenting
+  describe('refresh', () => {
+    it('delegates to authService.refreshTokens with the given token', async () => {
+      const dto = { refreshToken: 'some-refresh-token' };
+      authService.refreshTokens.mockResolvedValueOnce({
+        accessToken: 'new-access',
+        refreshToken: 'new-refresh',
+      });
 
-  // describe('refresh', () => {
-  //   it('delegates to authService.refreshTokens with the given token', async () => {
-  //     const dto = { refreshToken: 'some-refresh-token' };
-  //     authService.refreshTokens.mockResolvedValueOnce({
-  //       accessToken: 'new-access',
-  //       refreshToken: 'new-refresh',
-  //     });
+      const result = await controller.refresh(dto);
 
-  //     const result = await controller.refresh(dto);
+      expect(authService.refreshTokens).toHaveBeenCalledWith(dto.refreshToken);
+      expect(result).toEqual({
+        accessToken: 'new-access',
+        refreshToken: 'new-refresh',
+      });
+    });
+  });
 
-  //     expect(authService.refreshTokens).toHaveBeenCalledWith(dto.refreshToken);
-  //     expect(result).toEqual({
-  //       accessToken: 'new-access',
-  //       refreshToken: 'new-refresh',
-  //     });
-  //   });
-  // });
+  describe('logout', () => {
+    it('delegates to authService.logout with the given token', async () => {
+      const dto = { refreshToken: 'some-refresh-token' };
+      authService.logout.mockResolvedValueOnce({
+        message: 'Logged out successfully',
+      });
 
-  // describe('logout', () => {
-  //   it('delegates to authService.logout with the given token', async () => {
-  //     const dto = { refreshToken: 'some-refresh-token' };
-  //     authService.logout.mockResolvedValueOnce({
-  //       message: 'Logged out successfully',
-  //     });
+      const result = await controller.logout(dto);
 
-  //     const result = await controller.logout(dto);
-
-  //     expect(authService.logout).toHaveBeenCalledWith(dto.refreshToken);
-  //     expect(result).toEqual({ message: 'Logged out successfully' });
-  //   });
-  // });
+      expect(authService.logout).toHaveBeenCalledWith(dto.refreshToken);
+      expect(result).toEqual({ message: 'Logged out successfully' });
+    });
+  });
 });
