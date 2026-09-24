@@ -1,3 +1,4 @@
+import { EmailProviderError } from './email.error-handler';
 import { EmailService } from './email.service';
 
 import { ConfigService } from '@nestjs/config';
@@ -22,18 +23,21 @@ describe('EmailService', () => {
       get: jest.fn((key: string): string | undefined => {
         const values: Record<string, string> = {
           RESEND_API_KEY: 'api-key',
-          LOCALHOST: 'https://example.test',
+          'appConfig.frontendUrl': 'https://example.test',
+          EMAIL_FROM_NAME: 'TS RBAC Engine',
+          EMAIL_FROM_ADDRESS: 'onboarding@resend.dev',
         };
         return values[key];
       }),
     };
     service = new EmailService(config as unknown as ConfigService);
   });
+
   it('initializes Resend with the configured API key', () => {
     expect(Resend).toHaveBeenCalledWith('api-key');
   });
 
-  it('sends an email and returns provider metadata', async () => {
+  it('sends an email using the configured sender', async () => {
     const data = { id: 'email-id' };
     send.mockResolvedValue({ data, error: null });
 
@@ -44,8 +48,9 @@ describe('EmailService', () => {
         html: '<p>Body</p>',
       }),
     ).resolves.toEqual(data);
+
     expect(send).toHaveBeenCalledWith({
-      from: 'Acme <onboarding@resend.dev>',
+      from: 'TS RBAC Engine <onboarding@resend.dev>',
       to: 'user@example.com',
       subject: 'Subject',
       html: '<p>Body</p>',
@@ -70,10 +75,10 @@ describe('EmailService', () => {
     );
   });
 
-  it('throws when the provider returns an error', async () => {
+  it('throws an EmailProviderError with metadata when the provider returns an error', async () => {
     send.mockResolvedValue({
       data: null,
-      error: { message: 'Provider failed' },
+      error: { name: 'validation_error', message: 'Provider failed' },
     });
 
     await expect(
@@ -82,7 +87,7 @@ describe('EmailService', () => {
         subject: 'Subject',
         html: '<p>Body</p>',
       }),
-    ).rejects.toThrow('Provider failed');
+    ).rejects.toThrow(EmailProviderError);
   });
 
   it('builds the verification link and sends it', async () => {
@@ -97,6 +102,19 @@ describe('EmailService', () => {
         html: expect.stringContaining(
           'https://example.test/auth/verify-email?token=token-value',
         ) as string,
+      }),
+    );
+  });
+
+  it('sends a password-reset email', async () => {
+    send.mockResolvedValue({ data: { id: 'email-id' }, error: null });
+
+    await service.sendResetEmail('user@example.com', 'token-value');
+
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        subject: 'Reset your Password',
+        html: expect.stringContaining('token=token-value') as string,
       }),
     );
   });
