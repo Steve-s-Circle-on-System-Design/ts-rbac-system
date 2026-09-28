@@ -1,5 +1,5 @@
 export type RegisterResponse = {
-  id: string;
+  id?: string;
   email: string;
 };
 

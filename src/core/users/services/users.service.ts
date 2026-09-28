@@ -8,6 +8,7 @@ import { DeleteResult, Repository, UpdateResult } from 'typeorm';
 
 import { RefreshToken } from '../../auth/entities/refresh-token.entity';
 import { User } from '../entities/user.entity';
+import { AccountStatus } from '../enums/user.enum';
 
 @Injectable()
 export class UsersService {
@@ -143,5 +144,15 @@ export class UsersService {
 
   findOneByGoogleId(googleId: string): Promise<User | null> {
     return this.usersRepository.findOneBy({ googleId });
+  }
+
+  async removeStalePendingRegistrations(cutoff: Date): Promise<DeleteResult> {
+    return this.usersRepository
+      .createQueryBuilder()
+      .delete()
+      .from(User)
+      .where('status = :status', { status: AccountStatus.PENDING_VERIFICATION })
+      .andWhere('createdAt < :cutoff', { cutoff })
+      .execute();
   }
 }

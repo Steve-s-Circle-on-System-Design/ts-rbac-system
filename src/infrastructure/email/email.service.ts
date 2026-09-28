@@ -23,6 +23,10 @@ export class EmailService {
       : (address ?? 'onboarding@resend.dev');
   }
 
+  private getFrontendUrl(): string {
+    return this.configService.get<string>('appConfig.frontendUrl') ?? '';
+  }
+
   async sendEmail(
     params: SendEmailParams,
   ): Promise<CreateEmailResponseSuccess | null> {
@@ -35,34 +39,42 @@ export class EmailService {
 
     if (error) {
       this.logger.error(`Failed to send email: ${error.message}`);
-      throw new EmailProviderError(error.message, {
-        ...error,
-      });
+      throw new EmailProviderError(error.message, { ...error });
     }
     return data;
-  }
-
-  async sendResetEmail(
-    to: string,
-    token: string,
-  ): Promise<CreateEmailResponseSuccess | null> {
-    const resetLink = `${this.configService.get<string>('appConfig.frontendUrl')}/auth/reset-password?token=${token}`;
-    return this.sendEmail({
-      to,
-      subject: 'Reset your Password',
-      html: `<p>Please click the following link to reset your password: <a href="${resetLink}">Reset Password</a></p>`,
-    });
   }
 
   async sendVerificationEmail(
     to: string,
     token: string,
   ): Promise<CreateEmailResponseSuccess | null> {
-    const verificationLink = `${this.configService.get<string>('appConfig.frontendUrl')}/auth/verify-email?token=${token}`;
+    const link = `${this.getFrontendUrl()}/auth/verify-email?token=${token}`;
     return this.sendEmail({
       to,
       subject: 'Verify your email',
-      html: `<p>Please click the following link to verify your email: <a href="${verificationLink}">Verify Email</a></p>`,
+      html: `<p>Please click the following link to verify your email: <a href="${link}">Verify Email</a></p>`,
+    });
+  }
+
+  async sendResetEmail(
+    to: string,
+    token: string,
+  ): Promise<CreateEmailResponseSuccess | null> {
+    const link = `${this.getFrontendUrl()}/auth/reset-password?token=${token}`;
+    return this.sendEmail({
+      to,
+      subject: 'Reset your Password',
+      html: `<p>Please click the following link to reset your password: <a href="${link}">Reset Password</a></p>`,
+    });
+  }
+
+  async sendWelcomeEmail(
+    to: string,
+  ): Promise<CreateEmailResponseSuccess | null> {
+    return this.sendEmail({
+      to,
+      subject: 'Welcome!',
+      html: '<p>Welcome aboard — your account is now active.</p>',
     });
   }
 

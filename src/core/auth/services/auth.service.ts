@@ -14,17 +14,17 @@ import * as bcrypt from 'bcrypt';
 import { UUID, randomUUID } from 'node:crypto';
 
 import { User } from '../../users/entities/user.entity';
-import { AuthProvider } from '../../users/enums/user.enum';
+import { AccountStatus, AuthProvider } from '../../users/enums/user.enum';
 import { UsersService } from '../../users/services/users.service';
 import { LoginAuthDto } from '../dto/login.dto';
 import { RegisterAuthDto } from '../dto/register.dto';
 import { LoginResponse, RegisterResponse } from '../types/auth-response.type';
 
-const DUMMY_PASSWORD_HASH =
-  '$2b$12$MwL2hICCvJC6Ft2pCEb/o.TxXNtKk8bgxTDbE0SYclpdRrSxrpN0u';
-
 @Injectable()
 export class AuthService {
+  private readonly DUMMY_PASSWORD_HASH =
+    '$2b$12$MwL2hICCvJC6Ft2pCEb/o.TxXNtKk8bgxTDbE0SYclpdRrSxrpN0u';
+
   constructor(
     private readonly usersService: UsersService,
     private readonly tokenService: TokenService,
@@ -35,13 +35,13 @@ export class AuthService {
   async validateUser(email: string, password: string): Promise<User> {
     const user = await this.usersService.findOneByEmailWithPassword(email);
     if (!user || !user.password) {
-      await bcrypt.compare(password, DUMMY_PASSWORD_HASH);
+      await bcrypt.compare(password, this.DUMMY_PASSWORD_HASH);
       throw new UnauthorizedException('Invalid credentials');
     }
 
     const now = Date.now();
     if (user.lockedUntil && user.lockedUntil.getTime() > now) {
-      await bcrypt.compare(password, DUMMY_PASSWORD_HASH);
+      await bcrypt.compare(password, this.DUMMY_PASSWORD_HASH);
       throw new UnauthorizedException('Invalid credentials');
     }
 
@@ -71,21 +71,40 @@ export class AuthService {
     const existingUser = await this.usersService.findOneByEmail(
       registerAuthDto.email,
     );
-    if (existingUser) {
+    if (existingUser?.isVerified) {
       throw new BadRequestException('Email is already registered');
     }
+    const passwordHash = await bcrypt.hash(registerAuthDto.password, 10);
 
-    const hashedPassword = await bcrypt.hash(registerAuthDto.password, 10);
-    const user = await this.usersService.create({
+    let userId: string;
+
+    if (existingUser) {
+      // Existing pending registration: refresh credentials and resend,
+      // no new row is created.
+      await this.usersService.update(existingUser.id as UUID, {
+        password: passwordHash,
+      });
+      userId = existingUser.id;
+    } else {
+      const user = await this.usersService.create({
+        email: registerAuthDto.email,
+        name: registerAuthDto.email.split('@')[0],
+        password: passwordHash,
+        authProvider: AuthProvider.LOCAL,
+        status: AccountStatus.PENDING_VERIFICATION,
+        isVerified: false,
+      });
+      userId = user.id;
+    }
+
+    const rawToken = await this.emailVerificationService.createToken(userId);
+
+    this.eventEmitter.emit('user.registered', {
       email: registerAuthDto.email,
-      name: registerAuthDto.email.split('@')[0],
-      password: hashedPassword,
+      token: rawToken,
     });
-    const token = await this.emailVerificationService.createToken(user);
 
-    this.eventEmitter.emit('user.registered', { email: user.email, token });
-
-    return { id: user.id, email: user.email };
+    return { email: registerAuthDto.email };
   }
 
   async login(loginAuthDto: LoginAuthDto): Promise<LoginResponse> {

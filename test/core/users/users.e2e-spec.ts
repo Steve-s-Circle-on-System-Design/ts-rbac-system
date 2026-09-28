@@ -1,6 +1,8 @@
+import { getQueueToken } from '@nestjs/bullmq';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 
+import { Queue } from 'bullmq';
 import type { UUID } from 'node:crypto';
 import request from 'supertest';
 import { App } from 'supertest/types';
@@ -10,11 +12,28 @@ import { AppModule } from '../../../src/app.module';
 import { UserRole } from '../../../src/core/users/enums/user.enum';
 import { UsersService } from '../../../src/core/users/services/users.service';
 import { EmailService } from '../../../src/infrastructure/email/email.service';
+import {
+  TokenCapture,
+  captureVerificationTokens,
+  registerAndVerify,
+} from '../helpers/register-and-verify.helper';
 
 describe('UsersController (E2E)', () => {
   let app: INestApplication<App>;
   let dataSource: DataSource;
   let usersService: UsersService;
+  let capture: TokenCapture;
+
+  // The email worker writes to email_logs in the background. Wait for it to
+  // finish so it never touches tables mid-truncate or after the app closes.
+  const waitForEmailQueueToDrain = async (): Promise<void> => {
+    const queue = app.get<Queue>(getQueueToken('email-queue'));
+    for (let i = 0; i < 50; i++) {
+      const counts = await queue.getJobCounts('active', 'waiting', 'delayed');
+      if (counts.active + counts.waiting + counts.delayed === 0) return;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+  };
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -24,6 +43,8 @@ describe('UsersController (E2E)', () => {
       .useValue({
         sendEmail: jest.fn().mockResolvedValue(null),
         sendVerificationEmail: jest.fn().mockResolvedValue(null),
+        sendWelcomeEmail: jest.fn().mockResolvedValue(null),
+        sendResetEmail: jest.fn().mockResolvedValue(null),
       })
       .compile();
 
@@ -40,37 +61,21 @@ describe('UsersController (E2E)', () => {
 
     dataSource = moduleFixture.get(DataSource);
     usersService = moduleFixture.get(UsersService);
+    capture = captureVerificationTokens(app);
   });
 
   beforeEach(async () => {
+    await waitForEmailQueueToDrain();
+    capture.reset();
     await dataSource.query('TRUNCATE TABLE refresh_tokens CASCADE;');
-    await dataSource.query('TRUNCATE TABLE users CASCADE;');
+    await dataSource.query('TRUNCATE TABLE users CASCADE;'); // cascades to email_verification_tokens
+    await dataSource.query('TRUNCATE TABLE email_logs;');
   });
 
   afterAll(async () => {
+    await waitForEmailQueueToDrain();
     await app.close();
   });
-
-  const registerAndVerify = async (credentials: {
-    email: string;
-    password: string;
-  }): Promise<void> => {
-    await request(app.getHttpServer())
-      .post('/auth/register')
-      .send(credentials)
-      .expect(201)
-      .expect({ message: 'Sign Up successful, verify Email.' });
-
-    const registeredUser = await usersService.findOneByEmail(credentials.email);
-    expect(registeredUser).not.toBeNull();
-    expect(registeredUser?.verificationToken).toEqual(expect.any(String));
-
-    await request(app.getHttpServer())
-      .get('/auth/verify-email')
-      .query({ token: registeredUser!.verificationToken })
-      .expect(200)
-      .expect({ verified: true });
-  };
 
   describe('GET /auth/admin-test (Guards & Authorization)', () => {
     const regularUserCredentials = {
@@ -84,8 +89,8 @@ describe('UsersController (E2E)', () => {
     };
 
     beforeEach(async () => {
-      await registerAndVerify(regularUserCredentials);
-      await registerAndVerify(adminUserCredentials);
+      await registerAndVerify(app, capture, regularUserCredentials);
+      await registerAndVerify(app, capture, adminUserCredentials);
 
       const adminUser = await usersService.findOneByEmail(
         adminUserCredentials.email,
@@ -119,7 +124,7 @@ describe('UsersController (E2E)', () => {
       const response = await request(app.getHttpServer())
         .get('/auth/admin-test')
         .set('Authorization', `Bearer ${token}`)
-        .expect(403); // should return forbidden status code
+        .expect(403);
 
       const body = response.body as { message?: string };
       expect(body.message).toBe(
@@ -141,7 +146,7 @@ describe('UsersController (E2E)', () => {
       const response = await request(app.getHttpServer())
         .get('/auth/admin-test')
         .set('Authorization', `Bearer ${token}`)
-        .expect(200); // success
+        .expect(200);
 
       const body = response.body as { message?: string };
       expect(body.message).toBe('You have admin access');

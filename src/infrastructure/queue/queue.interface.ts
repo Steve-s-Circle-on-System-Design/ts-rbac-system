@@ -29,8 +29,15 @@ export interface SecurityAlertJobData {
   correlationId?: string;
 }
 
+export interface WelcomeEmailJobData {
+  jobName: 'welcome-email';
+  email: string;
+  correlationId?: string;
+}
+
 export type EmailJobData =
   | EmailVerificationJobData
   | MagicOtpJobData
   | PasswordResetJobData
-  | SecurityAlertJobData;
+  | SecurityAlertJobData
+  | WelcomeEmailJobData;

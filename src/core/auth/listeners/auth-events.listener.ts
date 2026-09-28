@@ -31,6 +31,16 @@ export class AuthListener {
     });
   }
 
+  @OnEvent('user.verified')
+  async queueWelcomeEmail(payload: { email: string }): Promise<void> {
+    this.logger.log(`Welcome email queued for ${payload.email}`);
+
+    await this.emailQueue.add('welcome-email', {
+      jobName: 'welcome-email',
+      email: payload.email,
+    });
+  }
+
   @OnEvent('user.forgot-password')
   async queuePasswordResetEmail(payload: {
     email: string;

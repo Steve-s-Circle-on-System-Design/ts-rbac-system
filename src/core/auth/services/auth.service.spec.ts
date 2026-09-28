@@ -87,7 +87,7 @@ describe('AuthService', () => {
 
     await expect(
       service.register({ email: createdUser.email, password: 'password123' }),
-    ).resolves.toEqual({ id: createdUser.id, email: createdUser.email });
+    ).resolves.toEqual({ email: createdUser.email });
     expect(events.emit).toHaveBeenCalledWith('user.registered', {
       email: createdUser.email,
       token: 'verification-token',

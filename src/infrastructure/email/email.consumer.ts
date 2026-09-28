@@ -74,6 +74,8 @@ export class EmailConsumer extends WorkerHost {
     switch (data.jobName) {
       case 'email-verification':
         return this.emailService.sendVerificationEmail(data.email, data.token);
+      case 'welcome-email':
+        return this.emailService.sendWelcomeEmail(data.email);
       case 'password-reset':
         return this.emailService.sendResetEmail(data.email, data.token);
       case 'magic-otp':
