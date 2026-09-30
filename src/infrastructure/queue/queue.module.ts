@@ -1,4 +1,3 @@
-// src/queue/queue.module.ts
 import { EmailQueueErrorHandler } from './email-queue-error-handler.provider';
 
 import { BullModule } from '@nestjs/bullmq';
@@ -7,8 +6,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 
 import { AuthModule } from '../../core/auth/auth.module';
 import { AuthProcessor } from '../../core/auth/processors/auth.processor';
+import { EmailConsumer } from '../email/email.consumer';
 import { EmailModule } from '../email/email.module';
-import { EmailProcessor } from '../email/email.processor';
 
 @Module({
   imports: [
@@ -25,9 +24,23 @@ import { EmailProcessor } from '../email/email.processor';
       }),
     }),
 
-    BullModule.registerQueue({ name: 'email' }, { name: 'auth' }),
+    BullModule.registerQueue(
+      {
+        name: 'email-queue',
+        defaultJobOptions: {
+          attempts: 3,
+          backoff: {
+            type: 'exponential',
+            delay: 10000,
+          },
+          removeOnComplete: true,
+          removeOnFail: false,
+        },
+      },
+      { name: 'auth' },
+    ),
   ],
-  providers: [EmailProcessor, AuthProcessor, EmailQueueErrorHandler],
+  providers: [EmailConsumer, AuthProcessor, EmailQueueErrorHandler],
   exports: [BullModule],
 })
 export class QueueModule {}

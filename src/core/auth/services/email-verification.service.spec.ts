@@ -1,66 +1,92 @@
 import { EmailVerificationService } from './email-verification.service';
+import { TokenService } from './token.service';
 
 import { BadRequestException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
-import { User } from '../../users/entities/user.entity';
 import { AccountStatus } from '../../users/enums/user.enum';
 import { UsersService } from '../../users/services/users.service';
 
 describe('EmailVerificationService', () => {
-  const users = {
-    update: jest.fn(),
-    findOneById: jest.fn(),
+  const users = { findOneById: jest.fn(), update: jest.fn() };
+  const tokens = {
+    issueEmailVerificationToken: jest.fn(),
+    verifyAndConsumeEmailVerificationToken: jest.fn(),
   };
-  const jwt = { signAsync: jest.fn(), verifyAsync: jest.fn() };
-  const config = {
-    getOrThrow: jest.fn().mockReturnValue('verification-secret'),
-  };
-  const service = new EmailVerificationService(
-    users as unknown as UsersService,
-    jwt as never,
-    config as never,
-  );
+  const events = { emit: jest.fn() };
 
-  beforeEach(() => jest.resetAllMocks());
+  let service: EmailVerificationService;
 
-  it('creates and stores an email-verification token', async () => {
-    const user = { id: 'user-id', email: 'user@example.com' } as User;
-    jwt.signAsync.mockResolvedValue('verification-token');
-
-    await expect(service.createToken(user)).resolves.toBe('verification-token');
-    expect(users.update).toHaveBeenCalledWith(user.id, {
-      verificationToken: 'verification-token',
-    });
+  beforeEach(() => {
+    jest.resetAllMocks();
+    service = new EmailVerificationService(
+      users as unknown as UsersService,
+      tokens as unknown as TokenService,
+      events as unknown as EventEmitter2,
+    );
   });
 
-  it('activates an account when the stored token matches', async () => {
-    jwt.verifyAsync.mockResolvedValue({
-      sub: 'user-id',
-      email: 'user@example.com',
-      purpose: 'email-verification',
-    });
+  it('delegates token creation to TokenService', async () => {
+    tokens.issueEmailVerificationToken.mockResolvedValue('raw-token');
+
+    await expect(service.createToken('user-1')).resolves.toBe('raw-token');
+    expect(tokens.issueEmailVerificationToken).toHaveBeenCalledWith('user-1');
+  });
+
+  it('activates the account and emits user.verified on a valid token', async () => {
+    tokens.verifyAndConsumeEmailVerificationToken.mockResolvedValue('user-1');
     users.findOneById.mockResolvedValue({
-      id: 'user-id',
-      verificationToken: 'token',
+      id: 'user-1',
+      email: 'user@example.com',
+      isVerified: false,
     });
 
     await expect(service.verifyEmail('token')).resolves.toEqual({
       verified: true,
     });
     expect(users.update).toHaveBeenCalledWith(
-      'user-id',
+      'user-1',
       expect.objectContaining({
         status: AccountStatus.ACTIVE,
         isVerified: true,
-        verificationToken: null,
       }),
     );
+    expect(events.emit).toHaveBeenCalledWith('user.verified', {
+      email: 'user@example.com',
+    });
   });
 
-  it('rejects an invalid token', async () => {
-    jwt.verifyAsync.mockRejectedValue(new Error('expired'));
+  it('rejects an invalid, expired or already-used token', async () => {
+    tokens.verifyAndConsumeEmailVerificationToken.mockResolvedValue(null);
+
     await expect(service.verifyEmail('token')).rejects.toEqual(
       new BadRequestException('Invalid or expired verification token'),
     );
+    expect(users.update).not.toHaveBeenCalled();
+    expect(events.emit).not.toHaveBeenCalled();
+  });
+
+  it('rejects when the token maps to a user that no longer exists', async () => {
+    tokens.verifyAndConsumeEmailVerificationToken.mockResolvedValue('user-1');
+    users.findOneById.mockResolvedValue(null);
+
+    await expect(service.verifyEmail('token')).rejects.toEqual(
+      new BadRequestException('Invalid or expired verification token'),
+    );
+  });
+
+  it('succeeds without re-activating or re-emitting for an already-verified user', async () => {
+    tokens.verifyAndConsumeEmailVerificationToken.mockResolvedValue('user-1');
+    users.findOneById.mockResolvedValue({
+      id: 'user-1',
+      email: 'user@example.com',
+      isVerified: true,
+    });
+
+    await expect(service.verifyEmail('token')).resolves.toEqual({
+      verified: true,
+    });
+    expect(users.update).not.toHaveBeenCalled();
+    expect(events.emit).not.toHaveBeenCalled();
   });
 });

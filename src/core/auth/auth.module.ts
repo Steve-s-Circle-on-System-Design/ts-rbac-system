@@ -10,7 +10,9 @@ import { QueueModule } from '../../infrastructure/queue/queue.module';
 import { UsersModule } from '../users/users.module';
 
 import { AuthController } from './controllers/auth.controller';
+import { EmailVerificationToken } from './entities/email-verification-token.entity';
 import { RefreshToken } from './entities/refresh-token.entity';
+import { PendingUserCleanupJob } from './jobs/pending-user-cleanup.job';
 import { AuthListener } from './listeners/auth-events.listener';
 import { AuthService } from './services/auth.service';
 import { EmailVerificationService } from './services/email-verification.service';
@@ -25,7 +27,7 @@ import { LocalStrategy } from './strategies/local.strategy';
     UsersModule,
     PassportModule,
     forwardRef(() => QueueModule),
-    TypeOrmModule.forFeature([RefreshToken]),
+    TypeOrmModule.forFeature([RefreshToken, EmailVerificationToken]),
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
@@ -37,9 +39,7 @@ import { LocalStrategy } from './strategies/local.strategy';
           secret: configService.getOrThrow<string>(
             'appConfig.auth.jwtAccessSecret',
           ),
-          signOptions: {
-            expiresIn,
-          },
+          signOptions: { expiresIn },
         };
       },
     }),
@@ -49,6 +49,7 @@ import { LocalStrategy } from './strategies/local.strategy';
     AuthService,
     TokenService,
     EmailVerificationService,
+    PendingUserCleanupJob,
     PasswordResetService,
     LocalStrategy,
     JwtStrategy,

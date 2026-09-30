@@ -13,7 +13,6 @@ export default registerAs('appConfig', () => ({
       process.env.REFRESH_TOKEN_HASH_SECRET || 'fallback-hash-secret-key',
     jwtVerificationSecret: process.env.JWT_VERIFICATION_SECRET,
     jwtResetSecret: process.env.JWT_RESET_SECRET,
-    // Parsing this into a number to prevent calculations on strings!
     bcryptSaltRounds: parseInt(process.env.BCRYPT_SALT_ROUNDS || '12', 10),
     lockoutMaxAttempts: parseInt(
       process.env.AUTH_LOCKOUT_MAX_ATTEMPTS || '5',
@@ -26,6 +25,17 @@ export default registerAs('appConfig', () => ({
   },
 
   // Email configurations
+  email: {
+    provider: process.env.EMAIL_PROVIDER || 'resend',
+    fromName: process.env.EMAIL_FROM_NAME || 'TS RBAC Engine',
+    fromAddress: process.env.EMAIL_FROM_ADDRESS || 'onboarding@resend.dev',
+    resendApiKey: process.env.RESEND_API_KEY,
+    retryAttempts: parseInt(process.env.EMAIL_RETRY_ATTEMPTS || '3', 10),
+    retryInitialDelayMs: parseInt(
+      process.env.EMAIL_RETRY_INITIAL_DELAY_MS || '10000',
+      10,
+    ),
+  },
 
   // Object Store Configuration (e.g S3, Cloudinary, etc)
 

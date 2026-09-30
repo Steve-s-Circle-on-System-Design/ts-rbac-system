@@ -4,11 +4,12 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 
 import type { SignOptions } from 'jsonwebtoken';
-import { type UUID, createHmac, randomUUID } from 'node:crypto';
-import { DataSource, Repository } from 'typeorm';
+import { type UUID, createHmac, randomBytes, randomUUID } from 'node:crypto';
+import { DataSource, IsNull, Repository } from 'typeorm';
 
 import { User } from '../../users/entities/user.entity';
 import { UsersService } from '../../users/services/users.service';
+import { EmailVerificationToken } from '../entities/email-verification-token.entity';
 import { RefreshToken } from '../entities/refresh-token.entity';
 import { LoginResponse } from '../types/auth-response.type';
 import { AuthTokenPayload } from '../types/auth.types';
@@ -18,6 +19,8 @@ export class TokenService {
   private readonly jwtRefreshSecret: string;
   private readonly jwtRefreshExpiry: string;
   private readonly refreshTokenHashSecret: string;
+  private readonly emailVerificationSecret: string;
+  private readonly emailVerificationTtlMs = 3 * 60 * 60 * 1000; // 3 hours
 
   constructor(
     private readonly usersService: UsersService,
@@ -25,6 +28,8 @@ export class TokenService {
     configService: ConfigService,
     @InjectRepository(RefreshToken)
     private readonly refreshTokenRepository: Repository<RefreshToken>,
+    @InjectRepository(EmailVerificationToken)
+    private readonly verificationTokenRepository: Repository<EmailVerificationToken>,
     private readonly dataSource: DataSource,
   ) {
     this.jwtRefreshSecret = configService.getOrThrow<string>(
@@ -35,6 +40,9 @@ export class TokenService {
     );
     this.refreshTokenHashSecret = configService.getOrThrow<string>(
       'appConfig.auth.refreshTokenHashSecret',
+    );
+    this.emailVerificationSecret = configService.getOrThrow<string>(
+      'appConfig.auth.jwtVerificationSecret',
     );
   }
 
@@ -51,7 +59,7 @@ export class TokenService {
     const result = await this.dataSource.transaction(async (manager) => {
       const tokenRepo = manager.getRepository(RefreshToken);
       const existingToken = await tokenRepo.findOne({
-        where: { token: this.hashToken(refreshToken) },
+        where: { token: this.hashRefreshToken(refreshToken) },
         lock: { mode: 'pessimistic_write' },
       });
 
@@ -98,7 +106,7 @@ export class TokenService {
 
   async logout(refreshToken: string): Promise<{ message: string }> {
     const existingToken = await this.refreshTokenRepository.findOne({
-      where: { token: this.hashToken(refreshToken) },
+      where: { token: this.hashRefreshToken(refreshToken) },
     });
     if (!existingToken) {
       throw new UnauthorizedException('Invalid refresh token');
@@ -127,7 +135,7 @@ export class TokenService {
     );
 
     const tokenEntity = repository.create({
-      token: this.hashToken(refreshToken),
+      token: this.hashRefreshToken(refreshToken),
       tokenFamily,
       rotatedFrom,
       userId: user.id,
@@ -135,6 +143,69 @@ export class TokenService {
     });
     await repository.save(tokenEntity);
     return { accessToken, refreshToken };
+  }
+
+  /**
+   * Issues a one-time email-verification token. Only the hash is stored;
+   * the raw token is returned to be emailed and is never persisted.
+   * Any earlier unconsumed token for this user is invalidated first.
+   */
+  async issueEmailVerificationToken(userId: string): Promise<string> {
+    await this.verificationTokenRepository.delete({
+      userId,
+      consumedAt: IsNull(),
+    });
+
+    const rawToken = randomBytes(32).toString('hex');
+
+    await this.verificationTokenRepository.save(
+      this.verificationTokenRepository.create({
+        tokenHash: this.hashEmailVerificationToken(rawToken),
+        userId,
+        expiresAt: new Date(Date.now() + this.emailVerificationTtlMs),
+      }),
+    );
+
+    return rawToken;
+  }
+
+  /**
+   * Atomically consumes a valid (unexpired, unconsumed) token and returns
+   * its user id, or null. A single conditional UPDATE guarantees two
+   * concurrent requests can't both consume the same token.
+   */
+  async verifyAndConsumeEmailVerificationToken(
+    rawToken: string,
+  ): Promise<string | null> {
+    const now = new Date();
+
+    const result = await this.verificationTokenRepository
+      .createQueryBuilder()
+      .update(EmailVerificationToken)
+      .set({ consumedAt: now })
+      .where('tokenHash = :tokenHash', {
+        tokenHash: this.hashEmailVerificationToken(rawToken),
+      })
+      .andWhere('consumedAt IS NULL')
+      .andWhere('expiresAt > :now', { now })
+      .returning('userId')
+      .execute();
+
+    const rows = result.raw as { userId: string }[];
+    return rows[0]?.userId ?? null;
+  }
+
+  /** Housekeeping: removes tokens that are expired or already consumed. */
+  async removeSpentEmailVerificationTokens(): Promise<number> {
+    const result = await this.verificationTokenRepository
+      .createQueryBuilder()
+      .delete()
+      .from(EmailVerificationToken)
+      .where('expiresAt < :now', { now: new Date() })
+      .orWhere('consumedAt IS NOT NULL')
+      .execute();
+
+    return result.affected ?? 0;
   }
 
   private async revokeAllUserSessions(
@@ -163,9 +234,15 @@ export class TokenService {
     return new Date(Date.now() + parseInt(match[1], 10) * units[match[2]]);
   }
 
-  private hashToken(token: string): string {
-    return createHmac('sha256', this.refreshTokenHashSecret)
-      .update(token)
-      .digest('hex');
+  private hashRefreshToken(token: string): string {
+    return this.hmac(token, this.refreshTokenHashSecret);
+  }
+
+  private hashEmailVerificationToken(token: string): string {
+    return this.hmac(token, this.emailVerificationSecret);
+  }
+
+  private hmac(value: string, secret: string): string {
+    return createHmac('sha256', secret).update(value).digest('hex');
   }
 }
