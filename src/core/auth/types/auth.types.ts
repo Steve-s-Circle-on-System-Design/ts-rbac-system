@@ -3,6 +3,3 @@ export interface AuthTokenPayload {
   email: string;
   role: string;
 }
-export interface AuthJobData {
-  email: string;
-}

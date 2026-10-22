@@ -54,8 +54,10 @@ export class AuthController {
   }
 
   @Post('forgot-password')
-  forgotPassword(@Body() dto: { email: string }): { message: string } {
-    this.passwordResetService.queueForgotPasswordProcess(dto.email);
+  async forgotPassword(
+    @Body() dto: { email: string },
+  ): Promise<{ message: string }> {
+    await this.passwordResetService.forgotPassword(dto.email);
     return {
       message:
         'If an account with that email exists, a password reset link has been sent.',

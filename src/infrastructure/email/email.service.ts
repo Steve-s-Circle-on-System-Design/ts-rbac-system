@@ -1,7 +1,7 @@
 import {
   EMAIL_PROVIDER,
   EmailSendResult,
-  IEmailProvider,
+  type IEmailProvider,
 } from './email-provider.interface';
 import { SendEmailParams } from './email.interface';
 
