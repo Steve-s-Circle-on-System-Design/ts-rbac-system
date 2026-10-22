@@ -1,4 +1,5 @@
 import { EmailLogService } from './email-log.service';
+import { EmailSendResult } from './email-provider.interface';
 import { EmailProviderError } from './email.error-handler';
 import { EmailService } from './email.service';
 
@@ -6,7 +7,6 @@ import { OnWorkerEvent, Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 
 import { Job } from 'bullmq';
-import { CreateEmailResponseSuccess } from 'resend';
 
 import { EmailJobData } from '../queue/queue.interface';
 
@@ -70,7 +70,7 @@ export class EmailConsumer extends WorkerHost {
   private async dispatch(
     jobName: string,
     data: EmailJobData,
-  ): Promise<CreateEmailResponseSuccess | null> {
+  ): Promise<EmailSendResult | null> {
     switch (data.jobName) {
       case 'email-verification':
         return this.emailService.sendVerificationEmail(data.email, data.token);
