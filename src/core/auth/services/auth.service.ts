@@ -15,6 +15,7 @@ import { UUID, randomUUID } from 'node:crypto';
 
 import { User } from '../../users/entities/user.entity';
 import { AccountStatus, AuthProvider } from '../../users/enums/user.enum';
+import { UserLockoutService } from '../../users/services/user-lockout.service';
 import { UsersService } from '../../users/services/users.service';
 import { LoginAuthDto } from '../dto/login.dto';
 import { RegisterAuthDto } from '../dto/register.dto';
@@ -27,6 +28,7 @@ export class AuthService {
 
   constructor(
     private readonly usersService: UsersService,
+    private readonly userLockoutService: UserLockoutService,
     private readonly tokenService: TokenService,
     private readonly emailVerificationService: EmailVerificationService,
     private readonly eventEmitter: EventEmitter2,
@@ -39,26 +41,25 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const now = Date.now();
-    if (user.lockedUntil && user.lockedUntil.getTime() > now) {
+    if (this.userLockoutService.isLocked(user)) {
       await bcrypt.compare(password, this.DUMMY_PASSWORD_HASH);
       throw new UnauthorizedException('Invalid credentials');
     }
 
     if (user.lockedUntil) {
-      await this.usersService.resetFailedAttempts(user.id);
+      await this.userLockoutService.resetFailedAttempts(user.id);
       user.loginAttempts = 0;
       user.lockedUntil = null;
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      await this.usersService.incrementFailedAttempts(user.id);
+      await this.userLockoutService.incrementFailedAttempts(user.id);
       throw new UnauthorizedException('Invalid credentials');
     }
 
     if (user.loginAttempts > 0) {
-      await this.usersService.resetFailedAttempts(user.id);
+      await this.userLockoutService.resetFailedAttempts(user.id);
     }
 
     if (!user.isVerified) {
