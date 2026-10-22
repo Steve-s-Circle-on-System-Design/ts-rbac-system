@@ -1,12 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 
 import type { UUID } from 'node:crypto';
 import { DeleteResult, Repository, UpdateResult } from 'typeorm';
 
-import { RefreshToken } from '../../auth/entities/refresh-token.entity';
 import { User } from '../entities/user.entity';
 import { AccountStatus } from '../enums/user.enum';
 
@@ -14,53 +12,9 @@ import { AccountStatus } from '../enums/user.enum';
 export class UsersService {
   constructor(
     @InjectRepository(User)
-    private usersRepository: Repository<User>,
-    @InjectRepository(RefreshToken)
-    private refreshTokenRepository: Repository<RefreshToken>,
-    private readonly configService: ConfigService,
+    private readonly usersRepository: Repository<User>,
     private readonly eventEmitter: EventEmitter2,
   ) {}
-
-  async incrementFailedAttempts(userId: string): Promise<void> {
-    const maxAttempts = this.getPositiveIntegerConfig(
-      'appConfig.auth.lockoutMaxAttempts',
-      5,
-    );
-    const durationSeconds = this.getPositiveIntegerConfig(
-      'appConfig.auth.lockoutDurationSeconds',
-      15 * 60,
-    );
-
-    await this.usersRepository
-      .createQueryBuilder()
-      .update(User)
-      .set({
-        loginAttempts: () => '"loginAttempts" + 1',
-        lockedUntil: () =>
-          `CASE WHEN "loginAttempts" + 1 >= ${maxAttempts} ` +
-          `THEN CURRENT_TIMESTAMP + INTERVAL '${durationSeconds} seconds' ` +
-          'ELSE "lockedUntil" END',
-      })
-      .where('id = :userId', { userId })
-      .execute();
-  }
-
-  async resetFailedAttempts(userId: string): Promise<void> {
-    await this.usersRepository.update(userId, {
-      loginAttempts: 0,
-      lockedUntil: null,
-    });
-  }
-
-  async isAccountLocked(userId: string): Promise<boolean> {
-    const user = await this.usersRepository.findOneBy({ id: userId });
-
-    if (!user?.lockedUntil) {
-      return false;
-    }
-
-    return user.lockedUntil.getTime() > Date.now();
-  }
 
   create(userInformation: Partial<User>): Promise<User> {
     const user = this.usersRepository.create(userInformation);
@@ -97,29 +51,6 @@ export class UsersService {
     return this.usersRepository.delete(id);
   }
 
-  async revokeAllRefreshTokens(userId: string, reason: string): Promise<void> {
-    await this.refreshTokenRepository
-      .createQueryBuilder()
-      .update(RefreshToken)
-      .set({
-        revokedAt: () => 'CURRENT_TIMESTAMP',
-        revokedReason: reason,
-      })
-      .where('userId = :userId', { userId })
-      .andWhere('revokedAt IS NULL')
-      .execute();
-  }
-
-  private normalizeEmail(email: string): string {
-    return email.trim().toLowerCase();
-  }
-
-  private getPositiveIntegerConfig(key: string, fallback: number): number {
-    const configuredValue = this.configService.get<number>(key, fallback);
-    return Number.isInteger(configuredValue) && configuredValue > 0
-      ? configuredValue
-      : fallback;
-  }
   uploadProfilePicture(
     userId: string,
     file: Express.Multer.File,
@@ -133,6 +64,7 @@ export class UsersService {
       message: 'Profile picture upload started',
     };
   }
+
   async updateProfilePicture(
     userId: string,
     profilePicture: string,
@@ -154,5 +86,9 @@ export class UsersService {
       .where('status = :status', { status: AccountStatus.PENDING_VERIFICATION })
       .andWhere('createdAt < :cutoff', { cutoff })
       .execute();
+  }
+
+  private normalizeEmail(email: string): string {
+    return email.trim().toLowerCase();
   }
 }
