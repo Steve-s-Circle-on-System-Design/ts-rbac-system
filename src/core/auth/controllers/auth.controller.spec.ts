@@ -15,7 +15,7 @@ describe('AuthController', () => {
   const tokens = { refreshTokens: jest.fn(), logout: jest.fn() };
   const verification = { verifyEmail: jest.fn() };
   const passwordReset = {
-    queueForgotPasswordProcess: jest.fn(),
+    forgotPassword: jest.fn(),
     resetPassword: jest.fn(),
   };
 
@@ -66,15 +66,18 @@ describe('AuthController', () => {
   });
 
   it('delegates password-reset operations', async () => {
+    passwordReset.forgotPassword.mockResolvedValue(undefined);
     passwordReset.resetPassword.mockResolvedValue({
       message: 'Password has been reset successfully.',
     });
 
-    expect(controller.forgotPassword({ email: 'user@example.com' })).toEqual({
+    await expect(
+      controller.forgotPassword({ email: 'user@example.com' }),
+    ).resolves.toEqual({
       message:
         'If an account with that email exists, a password reset link has been sent.',
     });
-    expect(passwordReset.queueForgotPasswordProcess).toHaveBeenCalledWith(
+    expect(passwordReset.forgotPassword).toHaveBeenCalledWith(
       'user@example.com',
     );
     await expect(

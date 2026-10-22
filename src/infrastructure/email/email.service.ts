@@ -1,53 +1,32 @@
-import { EmailProviderError } from './email.error-handler';
+import {
+  EMAIL_PROVIDER,
+  EmailSendResult,
+  type IEmailProvider,
+} from './email-provider.interface';
 import { SendEmailParams } from './email.interface';
 
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-
-import { CreateEmailResponseSuccess, Resend } from 'resend';
 
 @Injectable()
 export class EmailService {
-  private readonly resend: Resend;
-  private readonly logger = new Logger(EmailService.name);
-
-  constructor(private readonly configService: ConfigService) {
-    this.resend = new Resend(this.configService.get<string>('RESEND_API_KEY'));
-  }
-
-  private getDefaultFrom(): string {
-    const name = this.configService.get<string>('EMAIL_FROM_NAME');
-    const address = this.configService.get<string>('EMAIL_FROM_ADDRESS');
-    return name && address
-      ? `${name} <${address}>`
-      : (address ?? 'onboarding@resend.dev');
-  }
+  constructor(
+    @Inject(EMAIL_PROVIDER) private readonly emailProvider: IEmailProvider,
+    private readonly configService: ConfigService,
+  ) {}
 
   private getFrontendUrl(): string {
     return this.configService.get<string>('appConfig.frontendUrl') ?? '';
   }
 
-  async sendEmail(
-    params: SendEmailParams,
-  ): Promise<CreateEmailResponseSuccess | null> {
-    const { data, error } = await this.resend.emails.send({
-      from: params.from ?? this.getDefaultFrom(),
-      to: params.to,
-      subject: params.subject,
-      html: params.html,
-    });
-
-    if (error) {
-      this.logger.error(`Failed to send email: ${error.message}`);
-      throw new EmailProviderError(error.message, { ...error });
-    }
-    return data;
+  async sendEmail(params: SendEmailParams): Promise<EmailSendResult | null> {
+    return this.emailProvider.sendEmail(params);
   }
 
   async sendVerificationEmail(
     to: string,
     token: string,
-  ): Promise<CreateEmailResponseSuccess | null> {
+  ): Promise<EmailSendResult | null> {
     const link = `${this.getFrontendUrl()}/auth/verify-email?token=${token}`;
     return this.sendEmail({
       to,
@@ -59,7 +38,7 @@ export class EmailService {
   async sendResetEmail(
     to: string,
     token: string,
-  ): Promise<CreateEmailResponseSuccess | null> {
+  ): Promise<EmailSendResult | null> {
     const link = `${this.getFrontendUrl()}/auth/reset-password?token=${token}`;
     return this.sendEmail({
       to,
@@ -68,9 +47,7 @@ export class EmailService {
     });
   }
 
-  async sendWelcomeEmail(
-    to: string,
-  ): Promise<CreateEmailResponseSuccess | null> {
+  async sendWelcomeEmail(to: string): Promise<EmailSendResult | null> {
     return this.sendEmail({
       to,
       subject: 'Welcome!',
@@ -81,7 +58,7 @@ export class EmailService {
   async sendMagicOtpEmail(
     to: string,
     otpCode: string,
-  ): Promise<CreateEmailResponseSuccess | null> {
+  ): Promise<EmailSendResult | null> {
     return this.sendEmail({
       to,
       subject: 'Your one-time login code',
@@ -93,7 +70,7 @@ export class EmailService {
     to: string,
     event: string,
     metadata?: Record<string, unknown>,
-  ): Promise<CreateEmailResponseSuccess | null> {
+  ): Promise<EmailSendResult | null> {
     const details = metadata
       ? `<p>Details: ${JSON.stringify(metadata)}</p>`
       : '';

@@ -17,6 +17,7 @@ import {
   AuthProvider,
   UserRole,
 } from '../../users/enums/user.enum';
+import { UserLockoutService } from '../../users/services/user-lockout.service';
 import { UsersService } from '../../users/services/users.service';
 
 jest.mock('bcrypt', () => ({ compare: jest.fn(), hash: jest.fn() }));
@@ -39,6 +40,7 @@ describe('AuthService', () => {
 
   let service: AuthService;
   let users: Record<string, jest.Mock>;
+  let lockout: Record<string, jest.Mock>;
   let tokens: Record<string, jest.Mock>;
   let verification: Record<string, jest.Mock>;
   let events: { emit: jest.Mock };
@@ -50,11 +52,15 @@ describe('AuthService', () => {
       findOneByEmailWithPassword: jest.fn(),
       findOneByEmail: jest.fn(),
       findOneByGoogleId: jest.fn(),
-      incrementFailedAttempts: jest.fn(),
-      resetFailedAttempts: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
       findOneById: jest.fn(),
+    };
+    lockout = {
+      isLocked: jest.fn().mockReturnValue(false),
+      isAccountLocked: jest.fn().mockResolvedValue(false),
+      incrementFailedAttempts: jest.fn().mockResolvedValue(undefined),
+      resetFailedAttempts: jest.fn().mockResolvedValue(undefined),
     };
     tokens = { issueTokenPair: jest.fn() };
     verification = { createToken: jest.fn() };
@@ -63,6 +69,7 @@ describe('AuthService', () => {
     hash.mockReset();
     service = new AuthService(
       users as unknown as UsersService,
+      lockout as unknown as UserLockoutService,
       tokens as unknown as TokenService,
       verification as unknown as EmailVerificationService,
       events as unknown as EventEmitter2,
@@ -112,7 +119,7 @@ describe('AuthService', () => {
     );
   });
 
-  it('records failed password attempts', async () => {
+  it('records failed password attempts via UserLockoutService', async () => {
     const account = user();
     users.findOneByEmailWithPassword.mockResolvedValue(account);
     compare.mockResolvedValue(false);
@@ -120,7 +127,18 @@ describe('AuthService', () => {
     await expect(service.validateUser(account.email, 'wrong')).rejects.toEqual(
       new UnauthorizedException('Invalid credentials'),
     );
-    expect(users.incrementFailedAttempts).toHaveBeenCalledWith(account.id);
+    expect(lockout.incrementFailedAttempts).toHaveBeenCalledWith(account.id);
+  });
+
+  it('rejects login when account is locked', async () => {
+    const account = user();
+    users.findOneByEmailWithPassword.mockResolvedValue(account);
+    lockout.isLocked.mockReturnValue(true);
+
+    await expect(
+      service.validateUser(account.email, 'password123'),
+    ).rejects.toEqual(new UnauthorizedException('Invalid credentials'));
+    expect(compare).toHaveBeenCalled();
   });
 
   it('rejects an unverified user after a valid password', async () => {

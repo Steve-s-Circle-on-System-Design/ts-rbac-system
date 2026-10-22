@@ -208,10 +208,10 @@ export class TokenService {
     return result.affected ?? 0;
   }
 
-  private async revokeAllUserSessions(
+  async revokeAllUserSessions(
     userId: string,
     reason: string,
-    repository: Repository<RefreshToken>,
+    repository: Repository<RefreshToken> = this.refreshTokenRepository,
   ): Promise<void> {
     await repository
       .createQueryBuilder()

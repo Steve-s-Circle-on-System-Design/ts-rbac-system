@@ -3,11 +3,17 @@ import { AuthListener } from './auth-events.listener';
 import { Queue } from 'bullmq';
 
 describe('AuthListener', () => {
-  it('queues verification email jobs onto email-queue without per-job retry options', async () => {
-    const add = jest.fn().mockResolvedValue({ id: 'job-id' });
-    const emailQueue = { add } as unknown as Queue;
-    const authQueue = { add: jest.fn() } as unknown as Queue;
-    const listener = new AuthListener(emailQueue, authQueue);
+  let add: jest.Mock;
+  let emailQueue: Queue;
+  let listener: AuthListener;
+
+  beforeEach(() => {
+    add = jest.fn().mockResolvedValue({ id: 'job-id' });
+    emailQueue = { add } as unknown as Queue;
+    listener = new AuthListener(emailQueue);
+  });
+
+  it('queues verification email jobs onto email-queue', async () => {
     const payload = { email: 'user@example.com', token: 'token-value' };
 
     await listener.queueVerificationEmail(payload);
@@ -19,16 +25,21 @@ describe('AuthListener', () => {
     });
   });
 
-  it('queues password-reset email jobs with the new job name', async () => {
-    const add = jest.fn().mockResolvedValue({ id: 'job-id' });
-    const emailQueue = { add } as unknown as Queue;
-    const authQueue = { add: jest.fn() } as unknown as Queue;
-    const listener = new AuthListener(emailQueue, authQueue);
+  it('queues welcome email jobs onto email-queue', async () => {
+    const payload = { email: 'user@example.com' };
 
-    await listener.queuePasswordResetEmail({
+    await listener.queueWelcomeEmail(payload);
+
+    expect(add).toHaveBeenCalledWith('welcome-email', {
+      jobName: 'welcome-email',
       email: 'user@example.com',
-      token: 'token-value',
     });
+  });
+
+  it('queues password-reset email jobs onto email-queue directly', async () => {
+    const payload = { email: 'user@example.com', token: 'token-value' };
+
+    await listener.queuePasswordResetEmail(payload);
 
     expect(add).toHaveBeenCalledWith('password-reset', {
       jobName: 'password-reset',
@@ -38,10 +49,7 @@ describe('AuthListener', () => {
   });
 
   it('propagates queue failures so the event emitter can report them', async () => {
-    const add = jest.fn().mockRejectedValue(new Error('Redis unavailable'));
-    const emailQueue = { add } as unknown as Queue;
-    const authQueue = { add: jest.fn() } as unknown as Queue;
-    const listener = new AuthListener(emailQueue, authQueue);
+    add.mockRejectedValue(new Error('Redis unavailable'));
 
     await expect(
       listener.queueVerificationEmail({

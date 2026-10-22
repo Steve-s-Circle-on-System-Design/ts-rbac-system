@@ -60,9 +60,6 @@ export class User {
   @Column({ type: 'varchar', nullable: true })
   verificationToken!: string | null;
 
-  @Column({ type: 'varchar', nullable: true })
-  resetToken!: string | null;
-
   @Column({ nullable: true })
   emailVerifiedAt?: Date;
 

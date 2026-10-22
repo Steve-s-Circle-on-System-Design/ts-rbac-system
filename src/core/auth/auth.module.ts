@@ -1,4 +1,4 @@
-import { Module, forwardRef } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
@@ -11,6 +11,8 @@ import { UsersModule } from '../users/users.module';
 
 import { AuthController } from './controllers/auth.controller';
 import { EmailVerificationToken } from './entities/email-verification-token.entity';
+import { OtpVerification } from './entities/otp-verification.entity';
+import { PasswordReset } from './entities/password-reset.entity';
 import { RefreshToken } from './entities/refresh-token.entity';
 import { PendingUserCleanupJob } from './jobs/pending-user-cleanup.job';
 import { AuthListener } from './listeners/auth-events.listener';
@@ -26,8 +28,13 @@ import { LocalStrategy } from './strategies/local.strategy';
   imports: [
     UsersModule,
     PassportModule,
-    forwardRef(() => QueueModule),
-    TypeOrmModule.forFeature([RefreshToken, EmailVerificationToken]),
+    QueueModule,
+    TypeOrmModule.forFeature([
+      RefreshToken,
+      PasswordReset,
+      OtpVerification,
+      EmailVerificationToken,
+    ]),
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
